@@ -3,8 +3,10 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define abs(x) ((x) < 0? -(x):(x))
 typedef long double real_t;
 //typedef double real_t;
+
 
 typedef struct matrix_st
 {
@@ -37,6 +39,7 @@ int8_t sub_matrix_from_matrix(matrix_t *a_matS, matrix_t *a_mat, uint32_t a_row,
 //ret: status, a_det: result determinant
 int8_t matrix_determinant_by_cofactor(real_t *a_det, matrix_t *a_mat);
 int8_t cofactor_matrix(matrix_t *a_mat_out, matrix_t *a_mat_in);
+int8_t matrix_inverse_cofactor(matrix_t *a_mat_out, matrix_t *a_mat_in);
 
 int8_t pow_minus_one(uint32_t a_number);
 //Target: add, sub, mul, transpose
@@ -48,15 +51,28 @@ int main(void)
     matrix_t l_test = {0};
     matrix_t l_test2 = {0};
     real_t l_det = 0;
-    //matrix_t l_test3 = {0};
-    //matrix_t l_test4 = {0};
+    matrix_t l_test3 = {0};
+    matrix_t l_test4 = {0};
     //matrix_t l_test5 = {0};
 
     if(0 == get_matrix_from_file(&l_test, "data/test_mat.txt"))
     {
+    	printf("Input Matrix\n");
 	    print_matrix(l_test);
-	    matrix_determinant_by_cofactor(&l_det, &l_test);
-	    printf("l_det = %lf\n", (double)l_det);
+	    //matrix_determinant_by_cofactor(&l_det, &l_test);
+	    //printf("l_det = %lf\n", (double)l_det);
+	    //cofactor_matrix(&l_test2, &l_test);
+	    matrix_inverse_cofactor(&l_test2, &l_test);
+	    printf("Inverse of the matrix\n");
+	    print_matrix(l_test2);
+	    
+	    matrix_multiplication(&l_test3, &l_test2, &l_test);
+	    printf("Identity matrix after multiplication- A^-1xA\n");
+	    print_matrix(l_test3);
+	    matrix_multiplication(&l_test4, &l_test, &l_test2);
+	    printf("Identity matrix after multiplication-AxA^-1\n");
+	    print_matrix(l_test4);
+	    
     }
     //sub_matrix_from_matrix(&l_test2, &l_test, 2, 0);
     //print_matrix(l_test2);
@@ -77,6 +93,46 @@ int main(void)
     return 0;
 }
 
+int8_t matrix_inverse_cofactor(matrix_t *a_mat_out, matrix_t *a_mat_in)
+{
+	int8_t l_ret = 0;
+	if(NULL != a_mat_in->m_data && 0 != a_mat_in->m_row && 0 != a_mat_in->m_col)
+	{
+		if(a_mat_in->m_row == a_mat_in->m_col)
+		{
+			real_t l_det = 0;
+			real_t l_limit = 0.00000000001;
+			l_ret = matrix_determinant_by_cofactor(&l_det, a_mat_in);
+			printf("determinant = %lf\n", (double)l_det);
+			if(l_limit <= abs(l_det)) //Convince for a limit
+			{
+				real_t l_temp = 1/l_det;
+				matrix_t l_matT = {0};
+				cofactor_matrix(&l_matT, a_mat_in);
+				printf("cofactor_matrix\n");
+				print_matrix(l_matT);
+				matrix_transpose(a_mat_out, &l_matT);
+				printf("matrix_transpose\n");
+				print_matrix(*a_mat_out);
+				delete_matrix(&l_matT);
+				
+				matrix_const_mul(l_temp, a_mat_out);
+			}
+			
+		}
+		else
+		{
+			printf("check input matrices, dimension mismatch\n");
+			l_ret = 1;
+		}
+	}
+	else
+	{
+		printf("check input matrices, either empty or not\n");
+		l_ret = -5;
+	}
+	return l_ret;
+}
 int8_t cofactor_matrix(matrix_t *a_mat_out, matrix_t *a_mat_in)
 {
 	int8_t l_ret = 0;
@@ -106,8 +162,10 @@ int8_t cofactor_matrix(matrix_t *a_mat_out, matrix_t *a_mat_in)
 						matrix_t l_temp_mat = {0};
 						a_mat_out->m_data[i][j] = 0;
 						sub_matrix_from_matrix(&l_temp_mat, a_mat_in, i, j);
+						//print_matrix(l_temp_mat);
 						matrix_determinant_by_cofactor(&l_det, &l_temp_mat);
 						delete_matrix(&l_temp_mat);
+						//printf("l_det:= %lf\n", (double)l_det);
 						a_mat_out->m_data[i][j] = pow_minus_one(i + j) * l_det;
 					}
 			}
@@ -413,7 +471,7 @@ int8_t print_matrix(matrix_t a_mat)
 		for(j = 0; j < a_mat.m_col; j ++)
 		{
 			l_temp = a_mat.m_data[i][j];
-			printf("%0.7lf    ", l_temp);
+			printf("%0.9lf    ", l_temp);
 		}
 		printf("\n");
 	}

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #define abs(x) ((x) < 0? -(x):(x))
+#define LIMIT_TO_ZERO	0.00000000000001
 typedef long double real_t;
 //typedef double real_t;
 
@@ -21,6 +22,7 @@ int8_t remove_substring(char *a_str, const char *a_sub);
 int8_t parse_header(uint32_t *a_row, uint32_t *a_col, FILE *a_fp);
 int8_t print_matrix(matrix_t a_mat);
 int8_t create_matrix(matrix_t *a_mat, uint32_t a_row, uint32_t a_col);
+int8_t create_Identity_matrix(matrix_t *a_mat, uint32_t a_row, uint32_t a_col);
 int8_t delete_matrix(matrix_t *a_mat);
 
 int8_t matrix_copy(matrix_t *a_mat_to, matrix_t *a_mat_from);
@@ -36,42 +38,55 @@ int8_t matrix_sub_rowX_const_mul_rowY(matrix_t *a_mat, uint32_t a_rowX, uint32_t
 int8_t matrix_sub_colX_const_mul_colY(matrix_t *a_mat, uint32_t a_colX, uint32_t a_colY, real_t a_number); //row1 = row1-c*row2; operation inside matrix.
 int8_t sub_matrix_from_matrix(matrix_t *a_matS, matrix_t *a_mat, uint32_t a_row, uint32_t a_col);
 
+int8_t matrix_swap_row(matrix_t *a_mat, uint32_t a_row1, uint32_t a_row2);
+int8_t matrix_swap_col(matrix_t *a_mat, uint32_t a_col1, uint32_t a_col2);
 //ret: status, a_det: result determinant
 int8_t matrix_determinant_by_cofactor(real_t *a_det, matrix_t *a_mat);
 int8_t cofactor_matrix(matrix_t *a_mat_out, matrix_t *a_mat_in);
-int8_t matrix_inverse_cofactor(matrix_t *a_mat_out, matrix_t *a_mat_in);
+int8_t matrix_inverse_by_cofactor(matrix_t *a_mat_out, matrix_t *a_mat_in);
+
+int8_t matrix_determinant_by_gaussian_elimination(real_t *a_det, matrix_t *a_mat);
+int8_t matrix_inverse_by_gaussian_elimination(real_t *a_det, matrix_t *a_mat);
 
 int8_t pow_minus_one(uint32_t a_number);
-//Target: add, sub, mul, transpose
+int8_t swap_real_num(real_t *a_arg1, real_t *a_arg2);
+
 int main(void)
 {
 	int l_ret = 0;
 	int i;
 	
     matrix_t l_test = {0};
-    matrix_t l_test2 = {0};
     real_t l_det = 0;
-    matrix_t l_test3 = {0};
-    matrix_t l_test4 = {0};
+    //matrix_t l_test2 = {0};
+    //real_t l_det = 0;
+    //matrix_t l_test3 = {0};
+    //matrix_t l_test4 = {0};
     //matrix_t l_test5 = {0};
 
     if(0 == get_matrix_from_file(&l_test, "data/test_mat.txt"))
     {
     	printf("Input Matrix\n");
 	    print_matrix(l_test);
+	    matrix_determinant_by_gaussian_elimination(&l_det, &l_test);
+	    printf("matrix_determinant_by_gaussian_elimination() : %0.9lf\n", (double)l_det);
+	    matrix_determinant_by_cofactor(&l_det, &l_test);
+	    printf("matrix_determinant_by_cofactor() : %0.9lf\n", (double)l_det);
+	    //print_matrix(l_test);
 	    //matrix_determinant_by_cofactor(&l_det, &l_test);
 	    //printf("l_det = %lf\n", (double)l_det);
 	    //cofactor_matrix(&l_test2, &l_test);
-	    matrix_inverse_cofactor(&l_test2, &l_test);
-	    printf("Inverse of the matrix\n");
-	    print_matrix(l_test2);
+	    //matrix_inverse_by_cofactor(&l_test2, &l_test);
+	    //printf("Inverse of the matrix\n");
+	    //print_matrix(l_test2);
 	    
-	    matrix_multiplication(&l_test3, &l_test2, &l_test);
-	    printf("Identity matrix after multiplication- A^-1xA\n");
-	    print_matrix(l_test3);
-	    matrix_multiplication(&l_test4, &l_test, &l_test2);
-	    printf("Identity matrix after multiplication-AxA^-1\n");
-	    print_matrix(l_test4);
+	    //matrix_multiplication(&l_test3, &l_test2, &l_test);
+	    //printf("Identity matrix after multiplication- A^-1xA\n");
+	    //print_matrix(l_test3);
+	    //matrix_multiplication(&l_test4, &l_test, &l_test2);
+	    //printf("Identity matrix after multiplication-AxA^-1\n");
+	    //print_matrix(l_test4);
+	    
 	    
     }
     //sub_matrix_from_matrix(&l_test2, &l_test, 2, 0);
@@ -93,7 +108,187 @@ int main(void)
     return 0;
 }
 
-int8_t matrix_inverse_cofactor(matrix_t *a_mat_out, matrix_t *a_mat_in)
+int8_t matrix_inverse_by_gaussian_elimination(matrix_t *a_mat_out, matrix_t *a_mat_in)
+{
+	int8_t	l_ret = 0;
+	uint32_t i, j, k;
+	uint32_t l_first = 0;
+	uint32_t  l_swap = 0;
+	
+	real_t l_limit = LIMIT_TO_ZERO;
+	real_t l_factor = 0;
+	
+	matrix_t l_mat_det = {0};
+
+	*a_det = 0;
+	if(NULL != a_mat_in->m_data && 0 != a_mat_in->m_row && 0 != a_mat_in->m_col && NULL != a_mat_out)
+	{
+		if(a_mat->m_row <= 2)//2 or 1
+		{
+			matrix_determinant_by_cofactor(a_det, a_mat);
+		}
+		else // > 2
+		{
+			matrix_copy(&l_mat_det, a_mat);
+			for(i = 0; i < l_mat_det.m_row - 1; i ++) //NxN
+			{
+				l_first = i;
+				for(j = i + 1; j < l_mat_det.m_row; j ++) //start from 2nd row
+				{
+					if(abs(l_mat_det.m_data[j][i]) > abs(l_mat_det.m_data[i][i]))
+					{
+						l_first = j;
+					}
+			    }
+				//max found
+				if(abs(l_mat_det.m_data[l_first][i]) < l_limit)
+				{
+					*a_det = 0; //all element from the column is zero
+					return 0;
+				}
+				else if( i != l_first)
+			    {
+			    	l_swap ++;
+			    	matrix_swap_row(&l_mat_det, i, l_first);
+				}
+				//print_matrix(*l_mat_det);
+				
+				for(j = i + 1; j < l_mat_det.m_row; j ++)//l_mat_det->m_row == l_mat_det->m_col
+				{
+					l_factor = l_mat_det.m_data[j][i]/l_mat_det.m_data[i][i];
+					for(k = i; k < l_mat_det.m_col; k ++)
+					{
+						l_mat_det.m_data[j][k] = l_mat_det.m_data[j][k] - l_factor*l_mat_det.m_data[i][k];
+					}
+				}
+				//print_matrix(*l_mat_det);
+			}
+			*a_det = 1;
+			for(i = 0; i < l_mat_det.m_row; i ++)
+				*a_det *= l_mat_det.m_data[i][i];
+			*a_det *= pow_minus_one(l_swap);
+			
+			delete_matrix(&l_mat_det);
+		}	
+    }
+    return l_ret;
+}
+int8_t create_Identity_matrix(matrix_t *a_mat, uint32_t a_row, uint32_t a_col)
+{
+	uint32_t l_index = 0;
+	create_matrix(a_mat, a_row, a_col);
+	for(l_index = 0; l_index < a_row; l_index ++)
+	{
+		a_mat->m_data[l_index][l_index]=1;
+	}
+	return 0;
+}
+int8_t matrix_determinant_by_gaussian_elimination(real_t *a_det, matrix_t *a_mat)
+{
+	int8_t	l_ret = 0;
+	uint32_t i, j, k;
+	uint32_t l_first = 0;
+	uint32_t  l_swap = 0;
+	
+	real_t l_limit = LIMIT_TO_ZERO;
+	real_t l_factor = 0;
+	
+	matrix_t l_mat_det = {0};
+
+	*a_det = 0;
+	if(NULL != a_mat->m_data && 0 != a_mat->m_row && 0 != a_mat->m_col && NULL != a_det)
+	{
+		if(a_mat->m_row <= 2)//2 or 1
+		{
+			matrix_determinant_by_cofactor(a_det, a_mat);
+		}
+		else // > 2
+		{
+			matrix_copy(&l_mat_det, a_mat);
+			for(i = 0; i < l_mat_det.m_row - 1; i ++) //NxN
+			{
+				l_first = i;
+				for(j = i + 1; j < l_mat_det.m_row; j ++) //start from 2nd row
+				{
+					if(abs(l_mat_det.m_data[j][i]) > abs(l_mat_det.m_data[i][i]))
+					{
+						l_first = j;
+					}
+			    }
+				//max found
+				if(abs(l_mat_det.m_data[l_first][i]) < l_limit)
+				{
+					*a_det = 0; //all element from the column is zero
+					return 0;
+				}
+				else if( i != l_first)
+			    {
+			    	l_swap ++;
+			    	matrix_swap_row(&l_mat_det, i, l_first);
+				}
+				//print_matrix(*l_mat_det);
+				
+				for(j = i + 1; j < l_mat_det.m_row; j ++)//l_mat_det->m_row == l_mat_det->m_col
+				{
+					l_factor = l_mat_det.m_data[j][i]/l_mat_det.m_data[i][i];
+					for(k = i; k < l_mat_det.m_col; k ++)
+					{
+						l_mat_det.m_data[j][k] = l_mat_det.m_data[j][k] - l_factor*l_mat_det.m_data[i][k];
+					}
+				}
+				//print_matrix(*l_mat_det);
+			}
+			*a_det = 1;
+			for(i = 0; i < l_mat_det.m_row; i ++)
+				*a_det *= l_mat_det.m_data[i][i];
+			*a_det *= pow_minus_one(l_swap);
+			
+			delete_matrix(&l_mat_det);
+		}	
+    }
+    return l_ret;
+}
+
+int8_t matrix_swap_row(matrix_t *a_mat, uint32_t a_row1, uint32_t a_row2)
+{
+	int8_t l_ret = 0;
+	uint32_t i = 0;
+
+	if(NULL != a_mat->m_data && 0 != a_mat->m_row && 0 != a_mat->m_col && a_row1 < a_mat->m_row && a_row2 < a_mat->m_row && a_row1 != a_row2)
+	{
+		for(i = 0; i < a_mat->m_col; i ++)
+		{
+			swap_real_num(&a_mat->m_data[a_row1][i], &a_mat->m_data[a_row2][i]);
+		}
+	}
+	else
+	{
+		printf("check input matrices, either empty or parameter mismatch\n");
+		l_ret = -5;
+	}
+	
+	return l_ret;
+}
+int8_t matrix_swap_col(matrix_t *a_mat, uint32_t a_col1, uint32_t a_col2)
+{
+	int8_t l_ret = 0;
+	uint32_t i = 0;
+	if(NULL != a_mat->m_data && 0 != a_mat->m_row && 0 != a_mat->m_col && a_col1 < a_mat->m_col && a_col2 < a_mat->m_col && a_col1 != a_col2)
+	{
+		for(i = 0; i < a_mat->m_row; i ++)
+		{
+			swap_real_num(&a_mat->m_data[i][a_col1], &a_mat->m_data[i][a_col2]);
+		}
+	}
+	else
+	{
+		printf("check input matrices, either empty or parameter mismatch\n");
+		l_ret = -5;
+	}
+	return l_ret;
+}
+
+int8_t matrix_inverse_by_cofactor(matrix_t *a_mat_out, matrix_t *a_mat_in)
 {
 	int8_t l_ret = 0;
 	if(NULL != a_mat_in->m_data && 0 != a_mat_in->m_row && 0 != a_mat_in->m_col)
@@ -101,7 +296,7 @@ int8_t matrix_inverse_cofactor(matrix_t *a_mat_out, matrix_t *a_mat_in)
 		if(a_mat_in->m_row == a_mat_in->m_col)
 		{
 			real_t l_det = 0;
-			real_t l_limit = 0.00000000001;
+			real_t l_limit = LIMIT_TO_ZERO;
 			l_ret = matrix_determinant_by_cofactor(&l_det, a_mat_in);
 			printf("determinant = %lf\n", (double)l_det);
 			if(l_limit <= abs(l_det)) //Convince for a limit
@@ -118,7 +313,6 @@ int8_t matrix_inverse_cofactor(matrix_t *a_mat_out, matrix_t *a_mat_in)
 				
 				matrix_const_mul(l_temp, a_mat_out);
 			}
-			
 		}
 		else
 		{
@@ -691,4 +885,20 @@ int8_t parse_header(uint32_t *a_row, uint32_t *a_col, FILE *a_fp)
 int8_t pow_minus_one(uint32_t a_number)
 {
 	return a_number%2 ? -1:1;
+}
+
+int8_t swap_real_num(real_t *a_arg1, real_t *a_arg2)
+{
+	int8_t l_ret = 0;
+	if(NULL != a_arg1 && NULL != a_arg2)
+	{
+		real_t l_temp = *a_arg1;
+		*a_arg1 = *a_arg2;
+		*a_arg2 = l_temp;
+	}
+	else
+	{
+		l_ret = -1;
+	}
+	return l_ret;
 }

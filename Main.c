@@ -62,20 +62,28 @@ int main(void)
     matrix_t l_test2 = {0};
     //real_t l_det = 0;
     matrix_t l_test3 = {0};
-    //matrix_t l_test4 = {0};
-    //matrix_t l_test5 = {0};
+    matrix_t l_test4 = {0};
+    matrix_t l_test5 = {0};
+    matrix_t l_test6 = {0};
+    matrix_t l_test7 = {0};
 
     if(0 == get_matrix_from_file(&l_test, "data/test_mat.txt"))
     {
     	
 	    //matrix_determinant_by_gaussian_elimination(&l_det, &l_test);
 	    //matrix_transpose(&l_test, &l_test);
-	    //print_matrix(l_test);
-	    matrix_inverse_by_gaussian_elimination(&l_test2, &l_test);
-	    printf("Input Matrix\n");
+	    printf("Input\n");
 	    print_matrix(l_test);
-	    printf("output Matrix\n");
+	    matrix_inverse_by_gaussian_elimination(&l_test2, &l_test);
+	    printf("matrix_inverse_by_gaussian_elimination\n");
 	    print_matrix(l_test2);
+	    printf("A_Inverse x A\n");
+	    matrix_multiplication(&l_test3, &l_test2, &l_test);
+	    print_matrix(l_test3);
+	    //printf("Input Matrix\n");
+	    //print_matrix(l_test);
+	    //printf("output Matrix\n");
+	    //print_matrix(l_test2);
 	    //print_matrix(l_test2);
 	    //matrix_multiplication(&l_test3, &l_test2, &l_test);
 	    //print_matrix(l_test3);
@@ -86,9 +94,12 @@ int main(void)
 	    //matrix_determinant_by_cofactor(&l_det, &l_test);
 	    //printf("l_det = %lf\n", (double)l_det);
 	    //cofactor_matrix(&l_test2, &l_test);
-	    matrix_inverse_by_cofactor(&l_test3, &l_test);
-	    printf("Inverse of the matrix\n");
-	    print_matrix(l_test3);
+	    matrix_inverse_by_cofactor(&l_test4, &l_test);
+	    printf("matrix_inverse_by_cofactor of the matrix\n");
+	    print_matrix(l_test4);
+	    printf("A_Inverse x A\n");
+	    matrix_multiplication(&l_test5, &l_test4, &l_test);
+	    print_matrix(l_test5);
 	    
 	    //matrix_multiplication(&l_test3, &l_test2, &l_test);
 	    //printf("Identity matrix after multiplication- A^-1xA\n");
@@ -96,6 +107,12 @@ int main(void)
 	    //matrix_multiplication(&l_test4, &l_test, &l_test2);
 	    //printf("Identity matrix after multiplication-AxA^-1\n");
 	    //print_matrix(l_test4);
+	    printf("SUB=GI - CI\n");
+	    matrix_sub(&l_test6, &l_test2, &l_test4);
+	    print_matrix(l_test6);
+	    printf("SUB x A\n");
+	    matrix_multiplication(&l_test7, &l_test6, &l_test);
+	    print_matrix(l_test7);
 	    
 	    
     }
@@ -128,6 +145,7 @@ int8_t matrix_inverse_by_gaussian_elimination(matrix_t *a_mat_out, matrix_t *a_m
 	
 	real_t l_limit = LIMIT_TO_ZERO;
 	real_t l_factor = 0;
+	real_t l_diag_val = 0;
 	
 	matrix_t l_mat_inv = {0};
 
@@ -141,6 +159,8 @@ int8_t matrix_inverse_by_gaussian_elimination(matrix_t *a_mat_out, matrix_t *a_m
 		{
 			matrix_copy(&l_mat_inv, a_mat_in);
 			create_Identity_matrix(a_mat_out, a_mat_in->m_row, a_mat_in->m_col);
+			//printf("Start:\n");
+			//print_inv_matrix(l_mat_inv, *a_mat_out);
 			//for(l_steps = 0; l_steps < 2; l_steps ++)
 			//{
 				for(i = 0; i < l_mat_inv.m_row - 1; i ++) //NxN
@@ -158,6 +178,7 @@ int8_t matrix_inverse_by_gaussian_elimination(matrix_t *a_mat_out, matrix_t *a_m
 					{
 						//*a_det = 0; //all element from the column is zero
 						delete_matrix(&l_mat_inv);
+						delete_matrix(a_mat_out);
 						return 0;
 					}
 					else if( i != l_first)
@@ -176,6 +197,9 @@ int8_t matrix_inverse_by_gaussian_elimination(matrix_t *a_mat_out, matrix_t *a_m
 						for(k = i; k < l_mat_inv.m_col; k ++)
 						{
 							l_mat_inv.m_data[j][k] = l_mat_inv.m_data[j][k] - l_factor*l_mat_inv.m_data[i][k];
+						}
+						for(k = 0; k < l_mat_inv.m_col; k ++)
+						{
 							a_mat_out->m_data[j][k] = a_mat_out->m_data[j][k] - l_factor*a_mat_out->m_data[i][k];
 						}
 					}
@@ -189,20 +213,27 @@ int8_t matrix_inverse_by_gaussian_elimination(matrix_t *a_mat_out, matrix_t *a_m
 			// ========================================================
 			//PHASE 2: Backward Substitution (Turns diagonal to 1s)
 			// ========================================================
-			for (i = l_mat_inv.m_row; i > 0; i--)
+			i = l_mat_inv.m_row;
+			while(i > 0)
+			//for (i = l_mat_inv.m_row; i > 0; i--)
 			{
 				uint32_t current_row = i - 1;
+				//printf("current_row = %u\n", current_row);
 				// Check final diagonal elements for zero
                 if (abs(l_mat_inv.m_data[current_row][current_row]) < l_limit) {
                     delete_matrix(&l_mat_inv);
+                    delete_matrix(a_mat_out);
                     return 0;
                 }
-                for (j = current_row; j > 0; j--)
+                j = current_row;
+                while(j > 0)
+                //for (j = current_row; j > 0; j--)
                 {
                 	uint32_t target_row = j - 1;
+                	//printf("target_row = %u\n", target_row);
                 	l_factor = l_mat_inv.m_data[target_row][current_row] / l_mat_inv.m_data[current_row][current_row];
-                	//l_mat_inv.m_data[target_row][current_row] -= l_factor * l_mat_inv.m_data[current_row][current_row];
-                	for (k = current_row; k < l_mat_inv.m_col; k++)
+                	//printf("l_factor = %14.9lf\n", (double)l_factor);
+                	for (k = target_row; k < l_mat_inv.m_col; k++)
 					{
 						l_mat_inv.m_data[target_row][k] -= l_factor * l_mat_inv.m_data[current_row][k];
 					}
@@ -210,19 +241,27 @@ int8_t matrix_inverse_by_gaussian_elimination(matrix_t *a_mat_out, matrix_t *a_m
                     {
                         a_mat_out->m_data[target_row][k] -= l_factor * a_mat_out->m_data[current_row][k];
                     }
+                    j--;
 				}
-				print_inv_matrix(l_mat_inv, *a_mat_out);
+				//printf("IIII = %u\n", i);
+				//print_inv_matrix(l_mat_inv, *a_mat_out);
 				// Normalize current row diagonal element to 1
-                real_t l_diag_val = l_mat_inv.m_data[current_row][current_row];
+
+                l_diag_val = l_mat_inv.m_data[current_row][current_row];
+                //printf("l_diag_val = %14.9lf\n", (double)l_diag_val);
                 // Normalize l_mat_inv row
-				for (k = current_row; k < l_mat_inv.m_col; k++)
-				{
-					l_mat_inv.m_data[current_row][k] /= l_diag_val;
-				}
+				//for (k = current_row; k < l_mat_inv.m_col; k++) //Why??
+				//{
+				//	l_mat_inv.m_data[current_row][current_row] /= l_diag_val; //and why it is at all needed; removing anyway
+				//}
+
                 for (k = 0; k < a_mat_out->m_col; k++)
                 {
                     a_mat_out->m_data[current_row][k] /= l_diag_val;
                 }
+                //printf("After Normalize: %u\n", i);
+                //print_inv_matrix(l_mat_inv, *a_mat_out);
+                i --;
 			}
 		}
 		delete_matrix(&l_mat_inv);
@@ -233,10 +272,16 @@ int8_t matrix_inverse_by_gaussian_elimination(matrix_t *a_mat_out, matrix_t *a_m
 int8_t create_Identity_matrix(matrix_t *a_mat, uint32_t a_row, uint32_t a_col)
 {
 	uint32_t l_index = 0;
-	create_matrix(a_mat, a_row, a_col);
-	for(l_index = 0; l_index < a_row; l_index ++)
+	uint32_t l_min = a_row;
+	if(l_min > a_col)
 	{
-		a_mat->m_data[l_index][l_index]=1;
+		l_min = a_col;
+	}
+	
+	create_matrix(a_mat, a_row, a_col);
+	for(l_index = 0; l_index < l_min; l_index ++)
+	{
+		a_mat->m_data[l_index][l_index]= 1.0;
 	}
 	return 0;
 }
@@ -634,6 +679,7 @@ int8_t matrix_multiplication(matrix_t *a_matR, matrix_t *a_matA, matrix_t *a_mat
 		printf("check input matrices, either empty or not\n");
 		l_ret = -5;
 	}
+	return l_ret;
 }
 int8_t matrix_sub(matrix_t *a_matR, matrix_t *a_matA, matrix_t *a_matB) //R = A - B
 {
@@ -722,7 +768,7 @@ int8_t print_matrix(matrix_t a_mat)
 		for(j = 0; j < a_mat.m_col; j ++)
 		{
 			l_temp = a_mat.m_data[i][j];
-			printf("%0.9lf    ", l_temp);
+			printf("%14.9lf    ", l_temp);
 		}
 		printf("\n");
 	}
@@ -742,13 +788,13 @@ int8_t print_inv_matrix(matrix_t a_mat, matrix_t a_inv_mat)
 		for(j = 0; j < a_mat.m_col; j ++)
 		{
 			l_temp = a_mat.m_data[i][j];
-			printf("%0.9lf    ", l_temp);
+			printf("%14.9lf    ", l_temp);
 		}
 		printf("|");
 		for(j = 0; j < a_inv_mat.m_col; j ++)
 		{
 			l_temp = a_inv_mat.m_data[i][j];
-			printf("%0.9lf    ", l_temp);
+			printf("%14.9lf    ", l_temp);
 		}
 		printf("\n");
 	}
@@ -838,7 +884,7 @@ int8_t create_matrix(matrix_t *a_mat, uint32_t a_row, uint32_t a_col)
 	
 	if(NULL == a_mat->m_data)
 	{
-		if(0 != a_row || 0 != a_col)
+		if(!(0 == a_row || 0 == a_col))
 		{
 			a_mat->m_row = a_row;
 			a_mat->m_col = a_col;

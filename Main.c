@@ -2,8 +2,10 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <float.h>
+#include <math.h>
 
-#define abs(x) ((x) < 0? -(x):(x))
+#define abs(x) ((x) < 0? -(x):(x)) //Criticism: for abs(i++) expanded to ((i++) < 0? -(i++):(i++)); ===> simply replacement text.....so increases i two times
 #define LIMIT_TO_ZERO	0.00000000000001
 typedef long double real_t;
 //typedef double real_t;
@@ -55,7 +57,7 @@ int8_t swap_real_num(real_t *a_arg1, real_t *a_arg2);
 int main(void)
 {
 	int l_ret = 0;
-	int i;
+	int i,j;
 	
     matrix_t l_test = {0};
     real_t l_det = 0;
@@ -67,11 +69,33 @@ int main(void)
     matrix_t l_test6 = {0};
     matrix_t l_test7 = {0};
 
-    if(0 == get_matrix_from_file(&l_test, "data/test_mat.txt"))
+real_t evil_10x10_data[10][10] = {
+    {1000000001.0000000000L, 1000000000.0000000000L,  999999999.9999999999L,  999999999.9999999998L,  999999999.9999999997L,  999999999.9999999996L,  999999999.9999999995L,  999999999.9999999994L,  999999999.9999999993L,  999999999.9999999992L},
+    {1000000000.0000000000L, 1000000001.0000000000L, 1000000000.0000000000L,  999999999.9999999999L,  999999999.9999999998L,  999999999.9999999997L,  999999999.9999999996L,  999999999.9999999995L,  999999999.9999999994L,  999999999.9999999993L},
+    {1000000000.0000000000L, 1000000000.0000000000L, 1000000001.0000000000L, 1000000000.0000000000L,  999999999.9999999999L,  999999999.9999999998L,  999999999.9999999997L,  999999999.9999999996L,  999999999.9999999995L,  999999999.9999999994L},
+    {1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000001.0000000000L, 1000000000.0000000000L,  999999999.9999999999L,  999999999.9999999998L,  999999999.9999999997L,  999999999.9999999996L,  999999999.9999999995L},
+    {1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000001.0000000000L, 1000000000.0000000000L,  999999999.9999999999L,  999999999.9999999998L,  999999999.9999999997L,  999999999.9999999996L},
+    {1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000001.0000000000L, 1000000000.0000000000L,  999999999.9999999999L,  999999999.9999999998L,  999999999.9999999997L},
+    {1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000001.0000000000L, 1000000000.0000000000L,  999999999.9999999999L,  999999999.9999999998L},
+    {1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000001.0000000000L, 1000000000.0000000000L,  999999999.9999999999L},
+    {1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000001.0000000000L, 1000000000.0000000000L},
+    {1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000000.0000000000L, 1000000001.0000000000L}
+};
+    //if(0 == get_matrix_from_file(&l_test, "data/test_mat.txt"))
     {
+    	printf("real_t: %d\n", sizeof(real_t));
+    	printf("sizeof(long double) = %zu\n", sizeof(long double));
+printf("LDBL_MANT_DIG = %d\n", LDBL_MANT_DIG);
+printf("LDBL_DIG      = %d\n", LDBL_DIG);
+    	/*
     	
 	    //matrix_determinant_by_gaussian_elimination(&l_det, &l_test);
 	    //matrix_transpose(&l_test, &l_test);
+	    create_matrix(&l_test, 10, 10);
+	    for(i = 0; i < 10; i ++)
+	    for(j = 0; j < 10; j ++)
+	    l_test.m_data[i][j] = evil_10x10_data[i][j];
+	    
 	    printf("Input\n");
 	    print_matrix(l_test);
 	    matrix_inverse_by_gaussian_elimination(&l_test2, &l_test);
@@ -113,7 +137,7 @@ int main(void)
 	    printf("SUB x A\n");
 	    matrix_multiplication(&l_test7, &l_test6, &l_test);
 	    print_matrix(l_test7);
-	    
+	    */
 	    
     }
     //sub_matrix_from_matrix(&l_test2, &l_test, 2, 0);
@@ -168,13 +192,13 @@ int8_t matrix_inverse_by_gaussian_elimination(matrix_t *a_mat_out, matrix_t *a_m
 					l_first = i;
 					for(j = i + 1; j < l_mat_inv.m_row; j ++) //start from 2nd row
 					{
-						if(abs(l_mat_inv.m_data[j][i]) > abs(l_mat_inv.m_data[i][i]))
+						if(fabsl(l_mat_inv.m_data[j][i]) > fabsl(l_mat_inv.m_data[i][i]))
 						{
 							l_first = j;
 						}
 				    }
 					//max found
-					if(abs(l_mat_inv.m_data[l_first][i]) < l_limit)
+					if(fabsl(l_mat_inv.m_data[l_first][i]) < l_limit)
 					{
 						//*a_det = 0; //all element from the column is zero
 						delete_matrix(&l_mat_inv);
@@ -220,7 +244,7 @@ int8_t matrix_inverse_by_gaussian_elimination(matrix_t *a_mat_out, matrix_t *a_m
 				uint32_t current_row = i - 1;
 				//printf("current_row = %u\n", current_row);
 				// Check final diagonal elements for zero
-                if (abs(l_mat_inv.m_data[current_row][current_row]) < l_limit) {
+                if (fabsl(l_mat_inv.m_data[current_row][current_row]) < l_limit) {
                     delete_matrix(&l_mat_inv);
                     delete_matrix(a_mat_out);
                     return 0;
@@ -312,13 +336,13 @@ int8_t matrix_determinant_by_gaussian_elimination(real_t *a_det, matrix_t *a_mat
 				l_first = i;
 				for(j = i + 1; j < l_mat_det.m_row; j ++) //start from 2nd row
 				{
-					if(abs(l_mat_det.m_data[j][i]) > abs(l_mat_det.m_data[i][i]))
+					if(fabsl(l_mat_det.m_data[j][i]) > fabsl(l_mat_det.m_data[i][i]))
 					{
 						l_first = j;
 					}
 			    }
 				//max found
-				if(abs(l_mat_det.m_data[l_first][i]) < l_limit)
+				if(fabsl(l_mat_det.m_data[l_first][i]) < l_limit)
 				{
 					*a_det = 0; //all element from the column is zero
 					return 0;
@@ -401,7 +425,7 @@ int8_t matrix_inverse_by_cofactor(matrix_t *a_mat_out, matrix_t *a_mat_in)
 			real_t l_limit = LIMIT_TO_ZERO;
 			l_ret = matrix_determinant_by_cofactor(&l_det, a_mat_in);
 			//printf("determinant = %lf\n", (double)l_det);
-			if(l_limit <= abs(l_det)) //Convince for a limit
+			if(l_limit <= fabsl(l_det)) //Convince for a limit
 			{
 				real_t l_temp = 1/l_det;
 				matrix_t l_matT = {0};
@@ -1036,7 +1060,8 @@ int8_t parse_header(uint32_t *a_row, uint32_t *a_col, FILE *a_fp)
 }
 int8_t pow_minus_one(uint32_t a_number)
 {
-	return a_number%2 ? -1:1;
+	//return a_number%2 ? -1:1;
+	return (a_number & 1)? 1:-1;
 }
 
 int8_t swap_real_num(real_t *a_arg1, real_t *a_arg2)
